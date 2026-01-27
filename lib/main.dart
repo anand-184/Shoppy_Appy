@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'auth/login_screen.dart';
 import 'dashboards/super_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
+    url: 'https://nkfutrocdqvkhsqfwnrp.supabase.co',
+    anonKey: 'sb_publishable_zh78wR2LLAKwvOph7QDg_Q_GmedMPcu',
   );
+
+
 
   runApp(const MyApp());
 }
@@ -32,7 +35,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Shoppy Appy',
-      home: const SuperAdminBottomScreen(),
+      home: const LoginScreen(),
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: backgroundColor,

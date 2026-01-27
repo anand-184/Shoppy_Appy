@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shoppy_appy/auth/seller_register_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -398,7 +399,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SellerRegisterScreen()),
+              ),
               child: Text(
                   "Register as a Seller",
                   style: TextStyle(color: chocolate,

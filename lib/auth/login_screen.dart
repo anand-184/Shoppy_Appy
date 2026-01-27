@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shoppy_appy/auth/signup_screen.dart';
+import 'package:shoppy_appy/dashboards/super_dashboard.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../dashboards/SellerDashboard.dart';
+import '../dashboards/main_screen.dart';
 import 'reset_pass_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final supabase = Supabase.instance.client;
+
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
@@ -65,21 +71,33 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       FocusScope.of(context).unfocus();
       setState(() => _isLoading = true);
 
-      // Simulated Backend Logic
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        final res = await supabase.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
 
-      if (mounted) {
+        final user = res.user;
+
+        if (user == null) {
+          throw 'Login failed';
+        }
+
+        if (!mounted) return;
+
+        setState(() => _isLoading = false);
+        navigateAccRole(context, supabase);
+
+      } on AuthException catch (e) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Login successful! (Simulated)'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(20),
-          ),
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
         );
-        // Navigate to Home or next screen here
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -342,6 +360,43 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       ],
+    );
+  }
+}
+
+Future<void> navigateAccRole(
+    BuildContext context, SupabaseClient supabase) async {
+
+  final authUser = supabase.auth.currentUser;
+  if (authUser == null) return;
+
+  final response = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', authUser.id)
+      .single();
+
+  final String role = response['role'];
+
+  if (!context.mounted) return;
+
+  if (role == 'admin') {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => SuperAdminBottomScreen()),
+          (_) => false,
+    );
+  } else if (role == 'seller') {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => SellerDashboardScreen()),
+          (_) => false,
+    );
+  } else {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => MainScreen()),
+          (_) => false,
     );
   }
 }

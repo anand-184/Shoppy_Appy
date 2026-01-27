@@ -5,7 +5,7 @@ import 'package:shoppy_appy/admins/super_admin/screens/side_nav/request_mgmt.dar
 import 'package:shoppy_appy/admins/super_admin/screens/side_nav/vendor_mgmt.dart';
 
 import '../admins/super_admin/screens/bottom_nav/centre_dashboard.dart';
-import '../admins/super_admin/screens/bottom_nav/query_section.dart';
+import '../admins/super_admin/screens/bottom_nav/Tax&Commission.dart';
 import '../admins/super_admin/screens/side_nav/admin_mgmt.dart';
 import '../admins/super_admin/screens/side_nav/profile_mgmt.dart';
 
@@ -34,7 +34,7 @@ class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
   final List<Widget> _bottomNavScreens = [
     const FinanceSection(),
     const CenterDashboard(),
-    const QuerySection(),
+    const Tax_commission(),
   ];
 
   // Refined Color Palette
@@ -92,7 +92,7 @@ class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
           children: [
             _buildNavItem(0, Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Finance'),
             _buildCentralNavItem(1, Icons.dashboard_outlined, 'Dashboard'),
-            _buildNavItem(2, Icons.question_answer_outlined, Icons.question_answer_rounded, 'Query'),
+            _buildNavItem(2, Icons.monetization_on_outlined, Icons.monetization_on_rounded, 'Tax&Invoice'),
           ],
         ),
       ),
