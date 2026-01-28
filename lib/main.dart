@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shoppy_appy/dashboards/CustomerDashboard.dart';
+import 'package:shoppy_appy/dashboards/SellerDashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/login_screen.dart';
@@ -35,7 +37,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Shoppy Appy',
-      home: const LoginScreen(),
+      home: supabase.auth.currentUser == null
+    ? const LoginScreen()
+        : supabase.auth.currentUser!.userMetadata?['role'] == 'admin'
+    ? const SuperAdminBottomScreen()
+        : supabase.auth.currentUser!.userMetadata?['role'] == 'seller'
+    ? const SellerDashboardScreen()
+        : const CustomerdashboardScreen(),
+
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: backgroundColor,

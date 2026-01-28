@@ -3,6 +3,8 @@ import 'package:shoppy_appy/admins/super_admin/screens/bottom_nav/finance.dart';
 import 'package:shoppy_appy/admins/super_admin/screens/side_nav/customer_mgmt.dart';
 import 'package:shoppy_appy/admins/super_admin/screens/side_nav/request_mgmt.dart';
 import 'package:shoppy_appy/admins/super_admin/screens/side_nav/vendor_mgmt.dart';
+import 'package:shoppy_appy/auth/login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../admins/super_admin/screens/bottom_nav/centre_dashboard.dart';
 import '../admins/super_admin/screens/bottom_nav/Tax&Commission.dart';
@@ -17,6 +19,7 @@ class SuperAdminBottomScreen extends StatefulWidget {
 }
 
 class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
+  final supabase = Supabase.instance.client;
   int _currentIndex = 0; // For Side Nav
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int currentBottomIndex = 1; // For Bottom Nav
@@ -130,7 +133,7 @@ class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
                   leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                   title: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                   onTap: () {
-                    // Handle Logout
+                    logout(context);
                   },
                 ),
               ],
@@ -252,4 +255,20 @@ class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
       ),
     );
   }
+
+  Future<void> logout(BuildContext context) async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+
+      if (!context.mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+      );
+    } catch (e) {
+      debugPrint('Logout error: $e');
+    }
+  }
+
 }
