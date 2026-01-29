@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,13 +11,16 @@ class RequestMgmt extends StatefulWidget {
 }
 
 class _RequestMgmtState extends State<RequestMgmt> {
+  final supabase = Supabase.instance.client;
+
   final int pageSize = 20;
   int currentPage = 0;
+
   bool hasMore = true;
+  bool isLoading = false;
   bool isFetchingMore = false;
-  final supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> requesters = [];
-  bool isLoading = true;
+
+  final List<Map<String, dynamic>> requesters = [];
 
   @override
   void initState() {
@@ -27,19 +29,20 @@ class _RequestMgmtState extends State<RequestMgmt> {
   }
 
   Future<void> fetchRequests({bool loadMore = false}) async {
-    if (isFetchingMore || (!hasMore && loadMore)) return;
+    if (!mounted) return;
+    if (isLoading || isFetchingMore) return;
+    if (!hasMore && loadMore) return;
 
-    if (!loadMore) {
-      setState(() {
-        isLoading = true;
-        currentPage = 0;
-        requesters = [];
-      });
+    if (loadMore) {
+      isFetchingMore = true;
     } else {
-      setState(() {
-        isFetchingMore = true;
-      });
+      isLoading = true;
+      currentPage = 0;
+      hasMore = true;
+      requesters.clear();
     }
+
+    setState(() {});
 
     try {
       final from = currentPage * pageSize;
@@ -48,28 +51,28 @@ class _RequestMgmtState extends State<RequestMgmt> {
       final response = await supabase
           .from('sellers')
           .select()
-          .range(from, to)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(from, to);
 
       if (!mounted) return;
 
-      setState(() {
-        final List<Map<String, dynamic>> fetchedData = List<Map<String, dynamic>>.from(response);
-        requesters.addAll(fetchedData);
-        hasMore = fetchedData.length == pageSize;
-        if (hasMore) currentPage++;
-        isLoading = false;
-        isFetchingMore = false;
-      });
+      final List<Map<String, dynamic>> fetched =
+      List<Map<String, dynamic>>.from(response);
+
+      requesters.addAll(fetched);
+      hasMore = fetched.length == pageSize;
+      if (hasMore) currentPage++;
+
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-        isFetchingMore = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      isLoading = false;
+      isFetchingMore = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -78,139 +81,109 @@ class _RequestMgmtState extends State<RequestMgmt> {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
         title: const Text(
           "Seller's Requests",
-          style: TextStyle(fontFamily: "poppins", fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            onPressed: () => fetchRequests(),
             icon: const Icon(Icons.refresh),
+            onPressed: () => fetchRequests(),
           ),
         ],
       ),
-      body: isLoading
+      body: isLoading && requesters.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : requesters.isEmpty
-              ? const Center(child: Text("No Requests Found"))
-              : RefreshIndicator(
-                  onRefresh: () => fetchRequests(),
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (scrollInfo) {
-                      if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent &&
-                          hasMore &&
-                          !isFetchingMore) {
-                        fetchRequests(loadMore: true);
-                      }
-                      return false;
-                    },
-                    child: ListView.builder(
-                      itemCount: requesters.length + (hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == requesters.length) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-
-                        return _requestItem(
-                          requester: requesters[index],
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => Requestdetailscreen(
-                                  requester: requesters[index],
-                                ),
-                              ),
-                            );
-
-                            if (result == true) {
-                              fetchRequests();
-                            }
-                          },
-                        );
-                      },
-                    ),
+          ? const Center(child: Text("No Requests Found"))
+          : RefreshIndicator(
+        onRefresh: () => fetchRequests(),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (scroll) {
+            if (scroll.metrics.pixels >=
+                scroll.metrics.maxScrollExtent - 200 &&
+                hasMore &&
+                !isFetchingMore) {
+              fetchRequests(loadMore: true);
+            }
+            return false;
+          },
+          child: ListView.builder(
+            itemExtent: 100,
+            cacheExtent: 500,
+            itemCount:
+            requesters.length + (hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == requesters.length) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: CircularProgressIndicator(),
                   ),
-                ),
+                );
+              }
+
+              return RequestItem(
+                requester: requesters[index],
+                onTap: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => Requestdetailscreen(
+                        requester: requesters[index],
+                      ),
+                    ),
+                  );
+                  if (result == true) fetchRequests();
+                },
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
+}
 
-  Widget _requestItem({
-    required Map<String, dynamic> requester,
-    required VoidCallback onTap,
-  }) {
-    final String status = requester['status'] ?? 'Pending';
-    Color statusColor = Colors.orange;
-    if (status == 'Active' || status == 'Approved') statusColor = Colors.green;
-    if (status == 'Suspended' || status == 'Rejected') statusColor = Colors.red;
+/// ✅ SEPARATE WIDGET (VERY IMPORTANT)
+class RequestItem extends StatelessWidget {
+  final Map<String, dynamic> requester;
+  final VoidCallback onTap;
+
+  const RequestItem({
+    super.key,
+    required this.requester,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = requester['status'] ?? 'Pending';
+
+    final Color statusColor =
+    status == 'Active' || status == 'Approved'
+        ? Colors.green
+        : status == 'Rejected' || status == 'Suspended'
+        ? Colors.red
+        : Colors.orange;
 
     return Card(
-      elevation: 0,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF915F41).withOpacity(0.1),
-          child: const Icon(Icons.person, color: Color(0xFF915F41)),
+        leading: const CircleAvatar(
+          child: Icon(Icons.person),
         ),
         title: Text(
           requester['seller_name'] ?? 'Unknown',
-          style: const TextStyle(
-            fontFamily: "poppins",
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(requester['seller_email'] ?? ''),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  formatDateTime(requester['created_at']),
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ],
+        subtitle: Text(requester['seller_email'] ?? ''),
+        trailing: Text(
+          status,
+          style: TextStyle(color: statusColor),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
       ),
     );
-  }
-
-  String formatDateTime(dynamic value) {
-    if (value == null) return '';
-    final parsed = DateTime.tryParse(value.toString());
-    if (parsed == null) return '';
-    return "${parsed.day}/${parsed.month}/${parsed.year}";
   }
 }
