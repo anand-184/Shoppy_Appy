@@ -63,12 +63,6 @@ class _SuperAdminBottomScreenState extends State<SuperAdminBottomScreen> {
           style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_none_rounded, color: darkBrown),
-            onPressed: () {},
-          ),
-        ],
       ),
       drawer: _buildSideDrawer(),
       body: _isSideNavActive 

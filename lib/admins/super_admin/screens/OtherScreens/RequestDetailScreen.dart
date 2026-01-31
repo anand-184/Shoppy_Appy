@@ -59,6 +59,8 @@ class _RequestdetailscreenState extends State<Requestdetailscreen> {
       })
           .eq('id', widget.requester['id']);
 
+
+
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
@@ -87,7 +89,8 @@ class _RequestdetailscreenState extends State<Requestdetailscreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {Navigator.pop(context, true);
+                _supabase.from('sellers').delete().eq('id', widget.requester['id']);},
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Confirm'),
             ),
@@ -139,6 +142,7 @@ class _RequestdetailscreenState extends State<Requestdetailscreen> {
                 _row('Name', widget.requester['seller_name']),
                 _row('Email', widget.requester['seller_email']),
                 _row('Phone', widget.requester['mobile_no']),
+
               ],
             ),
             const SizedBox(height: 16),
