@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../admins/super_admin/screens/OtherScreens/AddProductDialog.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -24,14 +25,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Future<void> _fetchProducts() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+    
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
+      // Fetching products and joining with product_images to get the primary image
       final response = await _supabase
           .from('products')
-          .select()
+          .select('*, product_images(image_url, is_primary)')
           .eq('seller_id', user.id)
           .order('created_at', ascending: false);
 
@@ -76,7 +83,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.7,
+                    childAspectRatio: 0.72,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
@@ -86,12 +93,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     return _buildProductCard(product);
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to Add Product Screen
-        },
-        backgroundColor: chocolate,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 110.0),
+        child: FloatingActionButton(
+          onPressed: () async {
+            // Correct way to show a Dialog
+            Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AddProductDialog()),
+            );
+            final result = await Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AddProductDialog()),
+            );
+            if (result == true) {
+              _fetchProducts();
+            }
+          },
+          backgroundColor: chocolate,
+          child: const Icon(Icons.add, color: Colors.white, size: 30),
+        ),
       ),
     );
   }
@@ -112,6 +131,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Widget _buildProductCard(Map<String, dynamic> product) {
+    // Extract primary image if available
+    final images = product['product_images'] as List?;
+    String? imageUrl;
+    if (images != null && images.isNotEmpty) {
+      final primary = images.firstWhere((img) => img['is_primary'] == true, orElse: () => images.first);
+      imageUrl = primary['image_url'];
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -126,8 +153,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                product['image_url'] != null
-                    ? Image.network(product['image_url'], fit: BoxFit.cover)
+                imageUrl != null
+                    ? Image.network(imageUrl, fit: BoxFit.cover)
                     : Container(color: Colors.grey.shade100, child: const Icon(Icons.image_not_supported)),
                 Positioned(
                   top: 8,
@@ -139,7 +166,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      "₹${product['price']}",
+                      "₹${product['base_price']}",
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ),
@@ -153,27 +180,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product['name'] ?? 'No Name',
+                  product['product_name'] ?? 'No Name',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  product['category'] ?? 'General',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                  "Stock: ${product['stock'] ?? 0}",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: (product['stock'] ?? 0) < 5 ? Colors.red : Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Stock: ${product['stock'] ?? 0}",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: (product['stock'] ?? 0) < 5 ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      product['is_active'] == true ? "Active" : "Inactive",
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                     ),
                     const Icon(Icons.edit_note_outlined, size: 20, color: Colors.grey),
                   ],
