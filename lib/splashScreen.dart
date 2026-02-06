@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/login_screen.dart';
-import 'dashboards/CustomerDashboard.dart';
 import 'dashboards/SellerDashboard.dart';
 import 'dashboards/super_dashboard.dart';
+import 'dashboards/main_screen.dart';
 
 class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
@@ -19,40 +19,47 @@ class _SplashscreenState extends State<Splashscreen> {
   @override
   void initState() {
     super.initState();
-
-    /// ✅ Wait for first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _navigate();
+      _checkAuth();
     });
   }
 
-  Future<void> _navigate() async {
-    /// Short delay for smooth splash (NOT 3s)
-    await Future.delayed(const Duration(milliseconds: 700));
+  Future<void> _checkAuth() async {
+    // Short delay for visual polish
+    await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
     final user = supabase.auth.currentUser;
 
     if (user == null) {
-      _go(const LoginScreen());
+      _navigateTo(const LoginScreen());
       return;
     }
 
-    final role = user.userMetadata?['role'];
+    try {
+      // Fetch user role from your 'users' table
+      final response = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
 
-    switch (role) {
-      case 'admin':
-        _go(const SuperAdminBottomScreen());
-        break;
-      case 'seller':
-        _go(const SellerDashboardScreen());
-        break;
-      default:
-        _go(const CustomerdashboardScreen());
+      final String role = response['role'] ?? 'customer';
+
+      if (role == 'admin') {
+        _navigateTo(const SuperAdminBottomScreen());
+      } else if (role == 'seller') {
+        _navigateTo(const SellerDashboardScreen());
+      } else {
+        _navigateTo(const MainScreen());
+      }
+    } catch (e) {
+      // Fallback to login if something goes wrong (e.g. no internet or role not found)
+      _navigateTo(const LoginScreen());
     }
   }
 
-  void _go(Widget screen) {
+  void _navigateTo(Widget screen) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => screen),
     );
@@ -61,8 +68,23 @@ class _SplashscreenState extends State<Splashscreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
+      backgroundColor: Color(0xFFFDF8F5),
       body: Center(
-        child: CircularProgressIndicator(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Shoppy Appy',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5F372B),
+              ),
+            ),
+            SizedBox(height: 24),
+            CircularProgressIndicator(color: Color(0xFF915F41)),
+          ],
+        ),
       ),
     );
   }
